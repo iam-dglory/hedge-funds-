@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Search, TrendingUp, Activity, AlertTriangle, Play } from 'lucide-react';
 import TradingChart from './components/TradingChart';
 import MetricsPanel from './components/MetricsPanel';
-import { Search, TrendingUp, BarChart2 } from 'lucide-react';
+import PortfolioView from './components/PortfolioView';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'http://localhost:8000/api';
 
 function App() {
   const [ticker, setTicker] = useState('AAPL');
@@ -12,131 +13,167 @@ function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [viewMode, setViewMode] = useState('chart'); // 'chart' or 'portfolio'
+  const [executing, setExecuting] = useState(false);
 
-  const fetchData = async (symbol) => {
+  const fetchStockData = async (symbol) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_BASE}/api/data/${symbol}`);
+      const response = await axios.get(`${API_BASE}/data/${symbol}`);
       setData(response.data);
+      setTicker(symbol.toUpperCase());
+      setViewMode('chart');
     } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.detail || 'Failed to fetch data or train model.');
+      setError(err.response?.data?.detail || "Failed to fetch data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData(ticker);
-  }, [ticker]);
+    fetchStockData('AAPL');
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchInput.trim()) {
-      setTicker(searchInput.toUpperCase().trim());
+      fetchStockData(searchInput);
       setSearchInput('');
     }
   };
 
+  const handleExecute = async () => {
+    if (!ticker) return;
+    setExecuting(true);
+    try {
+      const response = await axios.post(`${API_BASE}/execute/${ticker}?qty=10`);
+      const { execution } = response.data;
+      if (execution.error) {
+        alert(`Execution Error: ${execution.error}`);
+      } else if (execution.status === 'skipped') {
+        alert(execution.message);
+      } else {
+        alert(`Trade Executed! Action: ${execution.action} | Symbol: ${execution.symbol}`);
+        setViewMode('portfolio'); // Switch to portfolio to see it
+      }
+    } catch (err) {
+      alert(`Failed to execute: ${err.response?.data?.detail || err.message}`);
+    } finally {
+      setExecuting(false);
+    }
+  };
+
+  const popularAssets = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY'];
+
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
-      {/* Sidebar */}
-      <div className="glass-panel" style={{ width: '300px', borderRight: '1px solid rgba(255,255,255,0.1)', padding: '24px', display: 'flex', flexDirection: 'column', borderRadius: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
-          <TrendingUp size={32} color="#00ffcc" className="accent-glow" style={{ borderRadius: '50%' }} />
-          <div>
-            <h2 className="text-gradient" style={{ margin: 0 }}>Nexus Quant</h2>
-            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '1px' }}>HEDGE SYSTEM V1</span>
-          </div>
+    <div className="flex h-screen bg-slate-900 text-slate-100 overflow-hidden">
+      
+      {/* Sidebar Navigation */}
+      <div className="w-64 border-r border-slate-800 bg-slate-900 flex flex-col">
+        <div className="p-6">
+          <h1 className="text-2xl font-bold text-teal-400 flex items-center gap-2">
+            <TrendingUp className="w-6 h-6" />
+            Nexus Quant
+          </h1>
+          <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-semibold">Hedge System V2</p>
         </div>
 
-        <form onSubmit={handleSearch} style={{ position: 'relative', marginBottom: '30px' }}>
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Enter Ticker (e.g. MSFT, TSLA)"
-            style={{
-              width: '100%',
-              padding: '12px 16px 12px 40px',
-              background: 'rgba(0,0,0,0.3)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              color: 'white',
-              outline: 'none',
-              fontSize: '0.9rem'
-            }}
-          />
-          <Search size={18} color="rgba(255,255,255,0.5)" style={{ position: 'absolute', left: '12px', top: '12px' }} />
-        </form>
+        <div className="px-4 mb-6">
+          <form onSubmit={handleSearch} className="relative">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Enter Ticker (e.g. MSFT)"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-teal-500 transition-colors"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </form>
+        </div>
 
-        <h3 style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', marginBottom: '16px', textTransform: 'uppercase' }}>Popular Assets</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY'].map(sym => (
-            <button
-              key={sym}
-              onClick={() => setTicker(sym)}
-              style={{
-                padding: '12px 16px',
-                background: ticker === sym ? 'rgba(0, 255, 204, 0.1)' : 'transparent',
-                border: ticker === sym ? '1px solid rgba(0, 255, 204, 0.3)' : '1px solid transparent',
-                borderRadius: '8px',
-                color: ticker === sym ? '#00ffcc' : 'rgba(255,255,255,0.7)',
-                textAlign: 'left',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                  if(ticker !== sym) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }
-              }}
-              onMouseLeave={(e) => {
-                  if(ticker !== sym) {
-                      e.currentTarget.style.background = 'transparent';
-                  }
-              }}
-            >
-              <BarChart2 size={16} /> {sym}
-            </button>
-          ))}
+        <div className="flex-1 overflow-y-auto px-4">
+          <div className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wider">Views</div>
+          <button 
+            onClick={() => setViewMode('chart')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${viewMode === 'chart' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Activity className="w-4 h-4" /> ML Dashboard
+          </button>
+          <button 
+            onClick={() => setViewMode('portfolio')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-6 transition-colors ${viewMode === 'portfolio' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <TrendingUp className="w-4 h-4" /> Live Portfolio
+          </button>
+
+          <div className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wider">Popular Assets</div>
+          <div className="space-y-1">
+            {popularAssets.map(asset => (
+              <button
+                key={asset}
+                onClick={() => fetchStockData(asset)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${ticker === asset && viewMode === 'chart' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'text-slate-400 hover:bg-slate-800'}`}
+              >
+                <Activity className="w-4 h-4" />
+                {asset}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col relative bg-slate-900/50">
         
-        {error ? (
-          <div className="glass-panel" style={{ padding: '24px', border: '1px solid #ff3366', background: 'rgba(255, 51, 102, 0.05)' }}>
-             <h3 style={{ color: '#ff3366', margin: '0 0 8px 0' }}>Error Fetching Data</h3>
-             <p style={{ margin: 0, color: 'rgba(255,255,255,0.7)' }}>{error}</p>
+        {/* Top Header Bar */}
+        <div className="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+             <h2 className="text-lg font-medium">{viewMode === 'chart' ? `${ticker} Analysis` : 'Paper Trading Account'}</h2>
+             {loading && <span className="text-teal-400 text-sm animate-pulse">Running ML Pipeline...</span>}
           </div>
-        ) : null}
-
-        {/* Top row: Chart */}
-        <div className="glass-panel" style={{ flex: '1 1 60%', minHeight: '450px', padding: '16px', position: 'relative' }}>
-          {loading && (
-             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(13, 17, 23, 0.7)', zIndex: 50, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '12px' }}>
-                <div className="accent-glow" style={{ width: '40px', height: '40px', border: '3px solid #00ffcc', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-             </div>
+          
+          {viewMode === 'chart' && data && !error && (
+            <button 
+              onClick={handleExecute}
+              disabled={executing}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors ${executing ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-teal-500 text-slate-900 hover:bg-teal-400'}`}
+            >
+              <Play className="w-4 h-4 fill-current" />
+              {executing ? 'Executing...' : `Live Execute ${ticker}`}
+            </button>
           )}
-          <TradingChart 
-             data={data?.chart_data || []} 
-             signals={data?.signals || []} 
-             ticker={ticker}
-          />
         </div>
 
-        {/* Bottom row: Metrics */}
-        <div style={{ flex: '0 0 auto' }}>
-          <MetricsPanel metrics={data?.metrics} loading={loading} />
-        </div>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {error ? (
+            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+               <AlertTriangle className="w-12 h-12 text-red-400 mb-4" />
+               <p className="text-lg">{error}</p>
+            </div>
+          ) : viewMode === 'portfolio' ? (
+            <PortfolioView />
+          ) : data ? (
+            <>
+              {/* Chart Section */}
+              <div className="glass-panel p-1 border border-slate-700/50 rounded-xl overflow-hidden shadow-2xl relative">
+                <TradingChart 
+                  data={data.chart_data} 
+                  signals={data.signals} 
+                  ticker={ticker} 
+                />
+              </div>
 
+              {/* Metrics Panel */}
+              <MetricsPanel 
+                metrics={data.metrics} 
+                ticker={ticker} 
+              />
+            </>
+          ) : null}
+        </div>
+        
       </div>
     </div>
   );

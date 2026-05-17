@@ -104,6 +104,47 @@ def get_ticker_data(ticker: str):
     except Exception as e:
          raise HTTPException(status_code=500, detail=str(e))
 
+from execution_engine import get_portfolio, get_open_positions, execute_trade
+
+@app.get("/api/portfolio")
+def fetch_portfolio():
+    return get_portfolio()
+
+@app.get("/api/positions")
+def fetch_positions():
+    return get_open_positions()
+
+@app.post("/api/execute/{ticker}")
+def trade_ticker(ticker: str, qty: int = 10):
+    """
+    Runs the latest prediction on the ticker and executes a paper trade on Alpaca.
+    """
+    ticker = ticker.upper()
+    df = fetch_data(ticker)
+    
+    if df is None or len(df) < 50:
+        raise HTTPException(status_code=400, detail="Not enough data to trade.")
+        
+    df, features = engineer_features(df)
+    
+    # Train/load model
+    metrics = train_model(ticker)
+    
+    # We need to predict the very last row
+    # The saved model is in backend/models
+    import joblib
+    import os
+    model_path = f"models/{ticker}_model.joblib"
+    if not os.path.exists(model_path):
+         raise HTTPException(status_code=500, detail="Model not found. Please load chart first.")
+         
+    model = joblib.load(model_path)
+    X_latest = df[features].iloc[-1:]
+    prediction = int(model.predict(X_latest)[0])
+    
+    result = execute_trade(ticker, prediction, qty)
+    return {"prediction": prediction, "execution": result}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
