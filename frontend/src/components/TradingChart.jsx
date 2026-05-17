@@ -7,6 +7,7 @@ const TradingChart = ({ data, signals, ticker }) => {
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
+    if (!data || data.length === 0) return; // Add guard clause here
     
     // Clear previous chart if it exists
     chartContainerRef.current.innerHTML = '';

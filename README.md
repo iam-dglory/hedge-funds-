@@ -1,55 +1,62 @@
-# Nexus Quant Hedge System 🚀
+# Nexus Quant Hedge System
 
-A complete, full-stack quantitative trading platform powered by Machine Learning. 
+A complete quantitative trading system built with Python, FastAPI, React, and Machine Learning (XGBoost). This system predicts daily stock price movements using technical indicators and provides a modern, high-performance web dashboard for analysis.
 
-This system fetches historical stock data, computes advanced technical indicators, trains an XGBoost classifier to predict future price movements (Buy/Sell signals), and visualizes the results on a professional, high-performance web dashboard.
+## Features
 
-## 🧠 The AI Model
+- **Data Engineering**: Automatically fetches historical daily price data via `yfinance`.
+- **Feature Generation**: Calculates key technical indicators (SMA, RSI, MACD, Bollinger Bands, ATR) using `pandas-ta`.
+- **Machine Learning**: Trains an XGBoost Classifier on historical data to predict if the next day's closing price will be higher than today's.
+- **API Backend**: Serves predictions and historical data via a robust `FastAPI` server.
+- **Trading Terminal UI**: A premium, dark-mode React dashboard utilizing `lightweight-charts` to visualize price action and overlay AI buy/sell signals.
 
-### Feature Engineering
-The model uses `pandas-ta` to calculate multiple technical indicators that serve as features:
-- **Simple Moving Averages (SMA):** 10-day and 50-day to capture short and medium-term trends.
-- **Relative Strength Index (RSI):** 14-day RSI to identify overbought or oversold conditions.
-- **MACD:** Moving Average Convergence Divergence to spot changes in momentum.
-- **Bollinger Bands:** To measure market volatility.
-- **Average True Range (ATR):** Another measure of volatility.
+## System Architecture
 
-### Training & Prediction
-- **Algorithm:** XGBoost Classifier.
-- **Target Variable:** The model predicts `1` (Buy) if the next day's closing price is strictly higher than today's closing price, and `0` (Sell) otherwise.
-- **Evaluation:** The model is evaluated on a chronologically split test set to simulate real-world trading without data leakage. Metrics like Accuracy and Precision are reported directly on the dashboard.
+1. **Backend (`/backend`)**:
+   - `data_engine.py`: Handles data ingestion and technical indicator calculations.
+   - `ml_model.py`: Handles feature engineering, model training, and prediction generation. Models are saved as `.joblib` files.
+   - `main.py`: The FastAPI application that exposes the data to the frontend.
+2. **Frontend (`/frontend`)**:
+   - Built with React and Vite.
+   - `TradingChart.jsx`: Renders the candlestick chart and ML signal markers.
+   - `MetricsPanel.jsx`: Displays the backtested accuracy and precision of the model.
 
-> **Note on "Clear Accuracy":** Predicting stock market movements with 100% accuracy is mathematically and practically impossible due to the high entropy of financial markets. The model aims for a statistical edge (e.g., >50% precision on buy signals) which, when combined with proper risk management, forms the basis of a quantitative hedge strategy.
+## Prerequisites
 
-## 🏗 System Architecture
+- Python 3.9+
+- Node.js 18+
 
-- **Backend:** Python, FastAPI, XGBoost, Scikit-Learn, yfinance.
-- **Frontend:** React, Vite, Lightweight Charts, Lucide-React.
+## Running the System Locally
 
-## 🚀 Getting Started
+### 1. Start the Backend
 
-### 1. Start the Backend API
-
-Open a terminal, navigate to the `backend` directory, activate the virtual environment, and run the server:
+Open a terminal and navigate to the backend directory:
 
 ```bash
 cd backend
+python3 -m venv venv
 source venv/bin/activate
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+pip install -r requirements.txt
+python main.py
 ```
 
-### 2. Start the Frontend Dashboard
+The FastAPI server will start on `http://localhost:8000`.
 
-Open a second terminal, navigate to the `frontend` directory, and start the Vite dev server:
+### 2. Start the Frontend
+
+Open a new terminal window and navigate to the frontend directory:
 
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`.
+The Vite development server will start. Open the provided local URL (usually `http://localhost:5173`) in your browser to view the terminal.
 
-## 📁 Repository Structure
+## A Note on "Clear Accuracy"
+
+## Repository Structure
 
 ```
 quant-hedge/
@@ -73,4 +80,11 @@ quant-hedge/
 │
 └── README.md
 ```
-```
+
+This project demonstrates the architecture of a quantitative trading system. It is important to note that predicting financial markets with 100% accuracy is theoretically and practically impossible due to market entropy and external variables. 
+
+The XGBoost model included here uses historical technical indicators. Its accuracy (typically between 50-60%) is transparently displayed on the dashboard for each stock. This should be used for educational and research purposes, not for making real financial decisions.
+
+## License
+
+MIT
