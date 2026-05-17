@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { createChart, CrosshairMode, CandlestickSeries } from 'lightweight-charts';
+import { createChart, CrosshairMode } from 'lightweight-charts';
 
 const TradingChart = ({ data, signals, ticker }) => {
   const chartContainerRef = useRef();
@@ -45,7 +45,7 @@ const TradingChart = ({ data, signals, ticker }) => {
       chartRef.current = chart;
 
       // Create Candlestick Series
-      const mainSeries = chart.addSeries(CandlestickSeries, {
+      const mainSeries = chart.addCandlestickSeries({
         upColor: '#26a69a',
         downColor: '#ef5350',
         borderVisible: false,
